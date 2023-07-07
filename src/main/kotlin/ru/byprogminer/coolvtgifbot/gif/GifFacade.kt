@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service
 import ru.byprogminer.coolvtgifbot.gif.factory.GifFactory
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.time.LocalDateTime
 import java.util.*
 
 
@@ -112,10 +113,13 @@ class GifFacade(
             else -> ORIGINAL_KIND
         }
 
+        // preventing telegram caching
+        val time = LocalDateTime.now()
+
         return if (text != null) {
-            "$host/api/gif/$index/$kind/${text.urlEncoded}"
+            "$host/api/gif/$index/$kind/${text.urlEncoded}?$time"
         } else {
-            "$host/api/gif/$index/$kind"
+            "$host/api/gif/$index/$kind?$time"
         }
     }
 
