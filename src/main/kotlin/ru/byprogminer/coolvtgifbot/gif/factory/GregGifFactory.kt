@@ -22,6 +22,8 @@ class GregGifFactory: AbstractGifFactory(
             width = 198,
             height = 35,
             color = Color.WHITE,
+            borderWidth = 5,
+            backgroundColor = Color(0, 0, 0, 0),
         ), resultPath)
     }
 }

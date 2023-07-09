@@ -7,6 +7,7 @@ import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
+import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
 import java.nio.file.Path
 
@@ -18,6 +19,8 @@ data class PlaceTextOptions(
     val width: Int,
     val height: Int,
     val color: Color,
+    val borderWidth: Int,
+    val backgroundColor: Color,
 )
 
 fun FFmpegFrameGrabber.placeText(options: PlaceTextOptions, resultPath: Path) = PlaceTextContext(options).run {
@@ -29,24 +32,42 @@ private class PlaceTextContext(
     private val placeTextOptions: PlaceTextOptions,
 ) {
 
-    var fontSize: Float = 0F
-    lateinit var preparedText: List<String>
+    lateinit var renderedText: BufferedImage
 
     fun FFmpegFrameGrabber.placeText(resultPath: Path) = use {
         val cvt = Java2DFrameConverter()
 
         start()
 
+        renderedText = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_4BYTE_ABGR).apply {
+            val g = createGraphics()
+
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+
+            val fontSize = g.calcMaxFontSize(placeTextOptions.text, placeTextOptions.width, placeTextOptions.height)
+            val text = g.placeLineBreaks(placeTextOptions.text, placeTextOptions.width)
+
+            // TODO change font
+            g.font = g.font.deriveFont(fontSize)
+
+            val x = placeTextOptions.x + (placeTextOptions.width.toFloat() / 2)
+            val y = placeTextOptions.y + (placeTextOptions.height.toFloat() / 2)
+
+            if (placeTextOptions.backgroundColor.alpha > 0) {
+                g.color = placeTextOptions.backgroundColor
+                g.drawBackground(text, x, y, placeTextOptions.borderWidth)
+            }
+
+            g.color = placeTextOptions.color
+            g.drawText(text, x, y)
+        }
+
         val rec = FFmpegFrameRecorder(resultPath.toFile(), imageWidth, imageHeight, audioChannels)
         rec.audioCodec = audioCodec
         rec.videoCodec = videoCodec
         rec.format = "mp4"
         rec.start()
-
-        BufferedImage(1, 1, BufferedImage.TYPE_4BYTE_ABGR).createGraphics().run {
-            fontSize = calcMaxFontSize(placeTextOptions.text, placeTextOptions.width, placeTextOptions.height)
-            preparedText = placeLineBreaks(placeTextOptions.text, placeTextOptions.width)
-        }
 
         rec.use {
             for (i in 0 until lengthInFrames) {
@@ -58,21 +79,7 @@ private class PlaceTextContext(
     fun BufferedImage.placeText(): BufferedImage {
         val result = clone()
 
-        val g = result.createGraphics()
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-
-        g.color = placeTextOptions.color
-
-        // TODO change font
-        g.font = g.font.deriveFont(fontSize)
-
-        g.drawText(
-            text = preparedText,
-            x = placeTextOptions.x + (placeTextOptions.width.toFloat() / 2),
-            y = placeTextOptions.y + (placeTextOptions.height.toFloat() / 2),
-        )
-
+        result.createGraphics().drawImage(renderedText, 0, 0, null)
         return result
     }
 
@@ -189,6 +196,74 @@ private class PlaceTextContext(
             return lines.toList()
         }
 
+        fun Graphics2D.drawBackground(
+            text: List<String>,
+            x: Float,
+            y: Float,
+            borderWidth: Int,
+        ) {
+            if (text.isEmpty()) {
+                return
+            }
+
+            val points = calcTextPoints(text, x, y)
+
+            val newPoints = points.indices.map { i ->
+                val (px, py) = points[(i + points.size - 1) % points.size]
+                val (cx, cy) = points[i]
+                val (nx, ny) = points[(i + 1) % points.size]
+
+                return@map when {
+                    px == cx && py < cy && cx < nx && cy == ny -> Point(cx + borderWidth, cy - borderWidth)
+                    px == cx && py < cy && cx > nx && cy == ny -> Point(cx + borderWidth, cy + borderWidth)
+                    px == cx && py > cy && cx < nx && cy == ny -> Point(cx - borderWidth, cy - borderWidth)
+                    px == cx && py > cy && cx > nx && cy == ny -> Point(cx - borderWidth, cy + borderWidth)
+                    px < cx && py == cy && cx == nx && cy < ny -> Point(cx + borderWidth, cy - borderWidth)
+                    px < cx && py == cy && cx == nx && cy > ny -> Point(cx - borderWidth, cy - borderWidth)
+                    px > cx && py == cy && cx == nx && cy < ny -> Point(cx + borderWidth, cy + borderWidth)
+                    px > cx && py == cy && cx == nx && cy > ny -> Point(cx - borderWidth, cy + borderWidth)
+                    else -> throw RuntimeException("wtf")
+                }
+            }
+
+            val path = Path2D.Float()
+            path.moveTo(newPoints[0].x, newPoints[0].y)
+
+            for (i in 1 until newPoints.size) {
+                path.lineTo(newPoints[i].x, newPoints[i].y)
+            }
+
+            fill(path)
+        }
+
+        fun Graphics.calcTextPoints(text: List<String>, x: Float, y: Float): List<Point> {
+            if (text.isEmpty()) {
+                return listOf()
+            }
+
+            val metrics = fontMetrics
+
+            val linesMetrics = text.map { metrics.getLineMetrics(it, this) }
+            var lineY = y - linesMetrics.map { it.height }.sum() / 2
+
+            val deque = ArrayDeque<Point>()
+
+            for (i in text.indices) {
+                val lineHeight = linesMetrics[i].height
+                val lineWidth = metrics.stringWidth(text[i])
+                val lineX = x - lineWidth / 2
+
+                deque.addFirst(Point(lineX, lineY))
+                deque.addFirst(Point(lineX, lineY + lineHeight))
+                deque.addLast(Point(lineX + lineWidth, lineY))
+                deque.addLast(Point(lineX + lineWidth, lineY + lineHeight))
+
+                lineY += lineHeight
+            }
+
+            return deque.toList()
+        }
+
         fun Graphics2D.drawText(text: List<String>, x: Float, y: Float) {
             val metrics = fontMetrics
 
@@ -205,5 +280,10 @@ private class PlaceTextContext(
             }
         }
     }
+
+    data class Point(
+        val x: Float,
+        val y: Float,
+    )
 }
 
