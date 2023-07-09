@@ -6,4 +6,3 @@ data class GifMetadata(
     val height: Int,
     val duration: Int,
 )
-

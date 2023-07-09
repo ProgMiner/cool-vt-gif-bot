@@ -10,7 +10,7 @@ import java.nio.file.Path
 
 
 @Service
-class GregGifFactory: AbstractGifFactory(
+class GregGifFactory : AbstractGifFactory(
     ClassPathResource("gif/greg.mp4"),
 ) {
 
@@ -20,10 +20,10 @@ class GregGifFactory: AbstractGifFactory(
             x = 5,
             y = 125,
             width = 198,
-            height = 35,
+            height = 30,
             color = Color.WHITE,
             borderWidth = 5,
-            backgroundColor = Color(0, 0, 0, 0),
+            backgroundColor = Color.BLACK,
         ), resultPath)
     }
 }

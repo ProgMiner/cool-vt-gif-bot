@@ -286,4 +286,3 @@ private class PlaceTextContext(
         val y: Float,
     )
 }
-
