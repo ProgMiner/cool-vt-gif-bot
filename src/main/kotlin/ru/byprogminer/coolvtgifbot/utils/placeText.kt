@@ -1,5 +1,7 @@
 package ru.byprogminer.coolvtgifbot.utils
 
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.withContext
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.FFmpegFrameRecorder
 import org.bytedeco.javacv.Java2DFrameConverter
@@ -22,6 +24,10 @@ data class PlaceTextOptions(
     val borderWidth: Int,
     val backgroundColor: Color,
 )
+
+suspend fun FFmpegFrameGrabber.coroutinePlaceText(options: PlaceTextOptions, resultPath: Path) = withContext(IO) {
+    placeText(options, resultPath)
+}
 
 fun FFmpegFrameGrabber.placeText(options: PlaceTextOptions, resultPath: Path) = PlaceTextContext(options).run {
     placeText(resultPath)

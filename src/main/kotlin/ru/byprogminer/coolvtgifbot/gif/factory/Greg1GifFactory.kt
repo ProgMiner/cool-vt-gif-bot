@@ -4,7 +4,7 @@ import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Service
 import ru.byprogminer.coolvtgifbot.utils.PlaceTextOptions
-import ru.byprogminer.coolvtgifbot.utils.placeText
+import ru.byprogminer.coolvtgifbot.utils.coroutinePlaceText
 import java.awt.Color
 import java.nio.file.Path
 
@@ -14,8 +14,8 @@ class Greg1GifFactory : AbstractGifFactory(
     ClassPathResource("gif/greg1.mp4"),
 ) {
 
-    override fun createOriginalGif(text: String, resultPath: Path) {
-        FFmpegFrameGrabber(originalGif.inputStream).placeText(PlaceTextOptions(
+    override suspend fun createOriginalGif(text: String, resultPath: Path) {
+        FFmpegFrameGrabber(originalGif.inputStream).coroutinePlaceText(PlaceTextOptions(
             text = text,
             x = 5,
             y = 25,

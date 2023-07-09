@@ -20,5 +20,5 @@ interface GifFactory {
     /**
      * Creates GIF with placed text
      */
-    fun createGif(text: String?, thumbnail: Boolean, resultPath: Path)
+    suspend fun createGif(text: String?, thumbnail: Boolean, resultPath: Path)
 }

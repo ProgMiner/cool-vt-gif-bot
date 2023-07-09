@@ -3,6 +3,7 @@ package ru.byprogminer.coolvtgifbot.bot
 import com.github.kotlintelegrambot.dispatcher.handlers.InlineQueryHandlerEnvironment
 import com.github.kotlintelegrambot.entities.inlinequeryresults.InlineQueryResult
 import com.github.kotlintelegrambot.entities.inlinequeryresults.MimeType
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import ru.byprogminer.coolvtgifbot.gif.GifFacade
@@ -16,11 +17,16 @@ class InlineHandler(
     private val startMaking: Boolean,
 ) {
 
+    companion object {
+
+        private val logger = LoggerFactory.getLogger(InlineHandler::class.java)
+    }
+
     suspend fun InlineQueryHandlerEnvironment.handle() {
         val query = inlineQuery.query.ifBlank { null }
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
 
-        println(inlineQuery)
+        logger.info("New inline query: {}", inlineQuery)
 
         // 50 is current max size of page in TG inline query results
         val (links, size) = gifFacade.getGifLinks(query, 50, offset, startMaking)
@@ -41,8 +47,7 @@ class InlineHandler(
         bot.answerInlineQuery(
             inlineQueryId = inlineQuery.id,
             inlineQueryResults = result,
-            cacheTime = 1,
-//            cacheTime = Int.MAX_VALUE,
+            cacheTime = Int.MAX_VALUE,
             isPersonal = false,
             nextOffset = nextOffset,
         )

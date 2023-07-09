@@ -1,32 +1,28 @@
 package ru.byprogminer.coolvtgifbot.gif
 
+import kotlinx.coroutines.*
 import org.apache.catalina.util.URLEncoder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
-import org.springframework.core.task.AsyncListenableTaskExecutor
-import org.springframework.scheduling.annotation.AsyncResult
 import org.springframework.stereotype.Service
-import org.springframework.util.concurrent.ListenableFuture
 import ru.byprogminer.coolvtgifbot.gif.factory.GifFactory
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.util.*
-import java.util.concurrent.Callable
 
 
 @Service
 class GifFacade(
     @Value("\${tg.host}")
     private val host: String,
-    private val gifFactories: List<GifFactory>,
-    private val executor: AsyncListenableTaskExecutor,
     @Value("\${gif.cache.size}")
     private val cacheSize: Int,
     @Value("\${gif.cache.path}")
     private val cachePath: Path,
+    private val gifFactories: List<GifFactory>,
 ) {
 
     companion object {
@@ -35,7 +31,7 @@ class GifFacade(
         const val THUMBNAIL_KIND = "thumb"
     }
 
-    private val cache = mutableMapOf<String, ListenableFuture<out Resource>>()
+    private val cache = mutableMapOf<String, Deferred<Resource>>()
     private val cacheKeys = LinkedList<String>()
 
     init {
@@ -54,7 +50,7 @@ class GifFacade(
      *
      * @return (list of (original GIF, thumbnail GIF, GIF metadata), amount of remaining items)
      */
-    fun getGifLinks(
+    suspend fun getGifLinks(
         text: String?,
         maxSize: Int,
         offset: Int,
@@ -65,9 +61,11 @@ class GifFacade(
         val page = tail.take(maxSize)
 
         if (startMaking) {
-            page.forEach { index ->
-                makeGif(index, text, false)
-                makeGif(index, text, true)
+            supervisorScope {
+                page.forEach { index ->
+                    launch { makeGif(index, text, false) }
+                    launch { makeGif(index, text, true) }
+                }
             }
         }
 
@@ -82,54 +80,55 @@ class GifFacade(
         return links to tail.size
     }
 
-    fun makeGif(index: Int, text: String?, thumbnail: Boolean): ListenableFuture<out Resource?> {
+    suspend fun makeGif(index: Int, text: String?, thumbnail: Boolean): Resource? = coroutineScope {
         if (index < 0) {
             throw IllegalArgumentException("index cannot be negative")
         }
 
         if (index >= gifFactories.size) {
-            return AsyncResult(null)
+            return@coroutineScope null
         }
 
         val cacheKey = "$index/$thumbnail/$text"
+
         val result = cache.computeIfAbsent(cacheKey) {
             cacheKeys.push(cacheKey)
 
-            return@computeIfAbsent makeGif0(index, text, thumbnail)
+            return@computeIfAbsent async { makeGif0(index, text, thumbnail) }
         }
 
         if (cache.size > cacheSize) {
-            val deletedFuture = cache.remove(cacheKeys.pop())!!
+            val deleted = cache.remove(cacheKeys.pop())!!.await()
 
-            deletedFuture.completable().thenAccept { deleted ->
-                if (deleted is FileSystemResource) {
+            if (deleted is FileSystemResource) {
+                withContext(Dispatchers.IO) {
                     Files.deleteIfExists(Paths.get(deleted.path))
                 }
             }
         }
 
-        return result
+        return@coroutineScope result.await()
     }
 
-    private fun makeGif0(index: Int, text: String?, thumbnail: Boolean): ListenableFuture<out Resource> {
+    private suspend fun makeGif0(index: Int, text: String?, thumbnail: Boolean): Resource {
         if (text == null && !thumbnail) {
             val result = gifFactories[index].originalGif
 
             if (result != null) {
-                return AsyncResult(result)
+                return result
             }
         }
 
         val uuid = UUID.randomUUID()
         val path = cachePath.resolve(uuid.toString())
 
-        Files.createDirectories(cachePath)
+        withContext(Dispatchers.IO) {
+            Files.createDirectories(cachePath)
+        }
 
-        return executor.submitListenable(Callable {
-            gifFactories[index].createGif(text, thumbnail, path)
+        gifFactories[index].createGif(text, thumbnail, path)
 
-            return@Callable FileSystemResource(path)
-        })
+        return FileSystemResource(path)
     }
 
     private fun makeLink(index: Int, text: String?, thumbnail: Boolean): String {

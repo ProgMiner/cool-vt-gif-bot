@@ -1,5 +1,7 @@
 package ru.byprogminer.coolvtgifbot.gif.factory
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.springframework.core.io.Resource
 import ru.byprogminer.coolvtgifbot.utils.gifMetadata
@@ -14,23 +16,29 @@ abstract class AbstractGifFactory(
 
     final override val metadata = FFmpegFrameGrabber(originalGif.inputStream).gifMetadata
 
-    override fun createGif(text: String?, thumbnail: Boolean, resultPath: Path) {
+    override suspend fun createGif(text: String?, thumbnail: Boolean, resultPath: Path) {
         if (text == null && !thumbnail) {
-            Files.newOutputStream(resultPath).use {
-                originalGif.inputStream.copyTo(it)
+            withContext(Dispatchers.IO) {
+                Files.newOutputStream(resultPath).use {
+                    originalGif.inputStream.copyTo(it)
+                }
             }
+
             return
         }
 
         if (text == null) {
-            Files.newOutputStream(resultPath).use {
-                thumbnailGif.inputStream.copyTo(it)
+            withContext(Dispatchers.IO) {
+                Files.newOutputStream(resultPath).use {
+                    thumbnailGif.inputStream.copyTo(it)
+                }
             }
+
             return
         }
 
         createOriginalGif(text, resultPath)
     }
 
-    protected abstract fun createOriginalGif(text: String, resultPath: Path)
+    protected abstract suspend fun createOriginalGif(text: String, resultPath: Path)
 }
