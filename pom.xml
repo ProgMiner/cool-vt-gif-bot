@@ -68,6 +68,68 @@
             <groupId>org.bytedeco</groupId>
             <artifactId>javacv-platform</artifactId>
             <version>1.5.9</version>
+
+            <exclusions>
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>opencv-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>flycapture-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>openblas-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>librealsense-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>librealsense2-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>libdc1394-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>libfreenect-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>libfreenect2-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>videoinput-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>artoolkitplus-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>leptonica-platform</artifactId>
+                </exclusion>
+
+                <exclusion>
+                    <groupId>org.bytedeco</groupId>
+                    <artifactId>tesseract-platform</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
@@ -79,6 +141,10 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+
+                <configuration>
+                    <executable>true</executable>
+                </configuration>
             </plugin>
 
             <plugin>
