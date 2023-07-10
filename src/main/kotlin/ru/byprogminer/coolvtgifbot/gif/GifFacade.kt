@@ -50,7 +50,7 @@ class GifFacade(
      *
      * @return (list of (original GIF, thumbnail GIF, GIF metadata), amount of remaining items)
      */
-    suspend fun getGifLinks(
+    fun getGifLinks(
         text: String?,
         maxSize: Int,
         offset: Int,
@@ -61,7 +61,7 @@ class GifFacade(
         val page = tail.take(maxSize)
 
         if (startMaking) {
-            supervisorScope {
+            CoroutineScope(Dispatchers.Default).run {
                 page.forEach { index ->
                     launch { makeGif(index, text, false) }
                     launch { makeGif(index, text, true) }
