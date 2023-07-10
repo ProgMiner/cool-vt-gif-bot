@@ -1,12 +1,12 @@
 package ru.byprogminer.coolvtgifbot.gif
 
 import kotlinx.coroutines.*
-import org.apache.catalina.util.URLEncoder
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import org.springframework.stereotype.Service
 import ru.byprogminer.coolvtgifbot.gif.factory.GifFactory
+import ru.byprogminer.coolvtgifbot.utils.urlEncoded
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -146,6 +146,4 @@ class GifFacade(
             "$host/api/gif/$index/$kind?$time"
         }
     }
-
-    private val Any.urlEncoded get() = URLEncoder.DEFAULT.encode(toString(), Charsets.UTF_8)
 }

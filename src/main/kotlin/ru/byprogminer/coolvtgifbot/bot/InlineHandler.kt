@@ -44,6 +44,8 @@ class InlineHandler(
 
         val nextOffset = if (links.size < size) "" else (offset + links.size).toString()
 
+        logger.info("Results: {}", result)
+
         bot.answerInlineQuery(
             inlineQueryId = inlineQuery.id,
             inlineQueryResults = result,
