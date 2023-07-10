@@ -70,6 +70,7 @@ private class PlaceTextContext(
         val rec = FFmpegFrameRecorder(resultPath.toFile(), imageWidth, imageHeight, audioChannels)
         rec.audioCodec = audioCodec
         rec.videoCodec = videoCodec
+        rec.frameRate = frameRate
         rec.format = "mp4"
 
         withContext(Dispatchers.IO) {
