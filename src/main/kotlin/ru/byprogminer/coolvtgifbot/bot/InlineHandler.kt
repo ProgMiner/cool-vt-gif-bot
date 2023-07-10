@@ -47,7 +47,7 @@ class InlineHandler(
         bot.answerInlineQuery(
             inlineQueryId = inlineQuery.id,
             inlineQueryResults = result,
-            cacheTime = Int.MAX_VALUE,
+            cacheTime = 1,
             isPersonal = false,
             nextOffset = nextOffset,
         )
