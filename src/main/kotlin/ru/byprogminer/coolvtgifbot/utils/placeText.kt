@@ -1,6 +1,6 @@
 package ru.byprogminer.coolvtgifbot.utils
 
-import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.FFmpegFrameRecorder
@@ -25,11 +25,7 @@ data class PlaceTextOptions(
     val backgroundColor: Color,
 )
 
-suspend fun FFmpegFrameGrabber.coroutinePlaceText(options: PlaceTextOptions, resultPath: Path) = withContext(IO) {
-    placeText(options, resultPath)
-}
-
-fun FFmpegFrameGrabber.placeText(options: PlaceTextOptions, resultPath: Path) = PlaceTextContext(options).run {
+suspend fun FFmpegFrameGrabber.placeText(options: PlaceTextOptions, resultPath: Path) = PlaceTextContext(options).run {
     placeText(resultPath)
 }
 
@@ -40,10 +36,12 @@ private class PlaceTextContext(
 
     lateinit var renderedText: BufferedImage
 
-    fun FFmpegFrameGrabber.placeText(resultPath: Path) = use {
+    suspend fun FFmpegFrameGrabber.placeText(resultPath: Path) = use {
         val cvt = Java2DFrameConverter()
 
-        start()
+        withContext(Dispatchers.IO) {
+            start()
+        }
 
         renderedText = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_4BYTE_ABGR).apply {
             val g = createGraphics()
@@ -73,11 +71,16 @@ private class PlaceTextContext(
         rec.audioCodec = audioCodec
         rec.videoCodec = videoCodec
         rec.format = "mp4"
-        rec.start()
+
+        withContext(Dispatchers.IO) {
+            rec.start()
+        }
 
         rec.use {
             for (i in 0 until lengthInFrames) {
-                rec.record(cvt.convert(cvt.convert(grabImage()).placeText()))
+                val frame = withContext(Dispatchers.IO) { grabImage() }
+
+                rec.record(cvt.convert(cvt.convert(frame).placeText()))
             }
         }
     }
