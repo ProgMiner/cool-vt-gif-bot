@@ -12,6 +12,8 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 
 @Service
@@ -31,8 +33,8 @@ class GifFacade(
         const val THUMBNAIL_KIND = "thumb"
     }
 
-    private val cache = mutableMapOf<String, Deferred<Resource>>()
-    private val cacheKeys = LinkedList<String>()
+    private val cache: MutableMap<String, Deferred<Resource>> = ConcurrentHashMap()
+    private val cacheKeys: Queue<String> = ConcurrentLinkedQueue()
 
     init {
         if (Files.isDirectory(cachePath)) {
@@ -96,13 +98,13 @@ class GifFacade(
         val cacheKey = "$index/$thumbnail/$text"
 
         val result = cache.computeIfAbsent(cacheKey) {
-            cacheKeys.push(cacheKey)
+            cacheKeys.add(cacheKey)
 
             return@computeIfAbsent async { makeGif0(index, text, thumbnail) }
         }
 
         if (cache.size > cacheSize) {
-            val deleted = cache.remove(cacheKeys.pop())!!.await()
+            val deleted = cache.remove(cacheKeys.remove())!!.await()
 
             if (deleted is FileSystemResource) {
                 withContext(Dispatchers.IO) {
