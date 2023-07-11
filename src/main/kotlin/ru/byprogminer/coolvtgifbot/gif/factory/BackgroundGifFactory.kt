@@ -1,9 +1,7 @@
 package ru.byprogminer.coolvtgifbot.gif.factory
 
-import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.springframework.core.io.Resource
 import ru.byprogminer.coolvtgifbot.utils.PlaceTextOptions
-import ru.byprogminer.coolvtgifbot.utils.placeText
 import java.awt.Color
 import java.nio.file.Path
 
@@ -41,6 +39,6 @@ abstract class BackgroundGifFactory(
     }
 
     override suspend fun createOriginalGif(text: String, resultPath: Path) {
-        FFmpegFrameGrabber(originalGif.inputStream).placeText(options.copy(text = text), resultPath)
+        placeText(options.copy(text = text), resultPath)
     }
 }

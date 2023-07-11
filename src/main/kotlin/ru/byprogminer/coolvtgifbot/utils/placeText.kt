@@ -1,17 +1,11 @@
 package ru.byprogminer.coolvtgifbot.utils
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.bytedeco.javacv.FFmpegFrameGrabber
-import org.bytedeco.javacv.FFmpegFrameRecorder
-import org.bytedeco.javacv.Java2DFrameConverter
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
 import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
-import java.nio.file.Path
 
 
 data class PlaceTextOptions(
@@ -25,8 +19,8 @@ data class PlaceTextOptions(
     val backgroundColor: Color,
 )
 
-suspend fun FFmpegFrameGrabber.placeText(options: PlaceTextOptions, resultPath: Path) = PlaceTextContext(options).run {
-    placeText(resultPath)
+fun BufferedImage.placeText(options: PlaceTextOptions) = PlaceTextContext(options).run {
+    placeText()
 }
 
 // object to encapsulate internal methods and prevent wasting namespace
@@ -34,63 +28,28 @@ private class PlaceTextContext(
     private val placeTextOptions: PlaceTextOptions,
 ) {
 
-    lateinit var renderedText: BufferedImage
+    fun BufferedImage.placeText() {
+        val g = createGraphics()
 
-    suspend fun FFmpegFrameGrabber.placeText(resultPath: Path) = use {
-        val cvt = Java2DFrameConverter()
+        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
-        withContext(Dispatchers.IO) {
-            start()
+        val fontSize = g.calcMaxFontSize(placeTextOptions.text, placeTextOptions.width, placeTextOptions.height)
+        val text = g.placeLineBreaks(placeTextOptions.text, placeTextOptions.width)
+
+        // TODO change font
+        g.font = g.font.deriveFont(fontSize)
+
+        val x = placeTextOptions.x + (placeTextOptions.width.toFloat() / 2)
+        val y = placeTextOptions.y + (placeTextOptions.height.toFloat() / 2)
+
+        if (placeTextOptions.backgroundColor.alpha > 0) {
+            g.color = placeTextOptions.backgroundColor
+            g.drawBackground(text, x, y, placeTextOptions.borderWidth)
         }
 
-        renderedText = BufferedImage(imageWidth, imageHeight, BufferedImage.TYPE_4BYTE_ABGR).apply {
-            val g = createGraphics()
-
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
-            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
-
-            val fontSize = g.calcMaxFontSize(placeTextOptions.text, placeTextOptions.width, placeTextOptions.height)
-            val text = g.placeLineBreaks(placeTextOptions.text, placeTextOptions.width)
-
-            // TODO change font
-            g.font = g.font.deriveFont(fontSize)
-
-            val x = placeTextOptions.x + (placeTextOptions.width.toFloat() / 2)
-            val y = placeTextOptions.y + (placeTextOptions.height.toFloat() / 2)
-
-            if (placeTextOptions.backgroundColor.alpha > 0) {
-                g.color = placeTextOptions.backgroundColor
-                g.drawBackground(text, x, y, placeTextOptions.borderWidth)
-            }
-
-            g.color = placeTextOptions.color
-            g.drawText(text, x, y)
-        }
-
-        val rec = FFmpegFrameRecorder(resultPath.toFile(), imageWidth, imageHeight, audioChannels)
-        rec.audioCodec = audioCodec
-        rec.videoCodec = videoCodec
-        rec.frameRate = frameRate
-        rec.format = "mp4"
-
-        withContext(Dispatchers.IO) {
-            rec.start()
-        }
-
-        rec.use {
-            for (i in 0 until lengthInFrames) {
-                val frame = withContext(Dispatchers.IO) { grabImage() }
-
-                rec.record(cvt.convert(cvt.convert(frame).placeText()))
-            }
-        }
-    }
-
-    fun BufferedImage.placeText(): BufferedImage {
-        val result = clone()
-
-        result.createGraphics().drawImage(renderedText, 0, 0, null)
-        return result
+        g.color = placeTextOptions.color
+        g.drawText(text, x, y)
     }
 
     companion object {
