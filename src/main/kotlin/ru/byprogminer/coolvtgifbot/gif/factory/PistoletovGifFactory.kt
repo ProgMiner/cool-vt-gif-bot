@@ -6,5 +6,6 @@ import org.springframework.stereotype.Service
 
 @Service
 class PistoletovGifFactory : BackgroundGifFactory(
+    "pistoletov",
     ClassPathResource("gif/pistoletov.mp4"),
 )

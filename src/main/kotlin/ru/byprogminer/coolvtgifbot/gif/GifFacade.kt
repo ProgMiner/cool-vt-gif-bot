@@ -36,8 +36,12 @@ class GifFacade(
 
     init {
         if (Files.isDirectory(cachePath)) {
-            Files.list(cachePath).use {
-                it.forEach(Files::deleteIfExists)
+            Files.list(cachePath).use { files ->
+                files.forEach {
+                    if (Files.isRegularFile(it)) {
+                        Files.deleteIfExists(it)
+                    }
+                }
             }
         }
     }

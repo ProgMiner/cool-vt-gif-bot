@@ -9,6 +9,7 @@ import java.nio.file.Path
 
 @Service
 class Greg1GifFactory : AbstractGifFactory(
+    "greg1",
     ClassPathResource("gif/greg1.mp4"),
 ) {
 

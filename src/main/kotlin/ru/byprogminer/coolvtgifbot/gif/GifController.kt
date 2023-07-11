@@ -49,6 +49,8 @@ class GifController(
     } catch (e: IllegalArgumentException) {
         ResponseEntity.badRequest().body(e.message)
     } catch (e: Exception) {
+        e.printStackTrace()
+
         ResponseEntity.internalServerError().body(e.message)
     }
 }

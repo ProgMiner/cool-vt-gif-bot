@@ -7,11 +7,12 @@ import java.nio.file.Path
 
 
 abstract class BackgroundGifFactory(
+    name: String,
     originalGif: Resource,
     private val color: Color = Color.WHITE,
     private val backgroundColor: Color = Color.BLACK,
     private val borderWidth: Int = 5,
-) : AbstractGifFactory(originalGif) {
+) : AbstractGifFactory(name, originalGif) {
 
     private companion object {
 
@@ -19,12 +20,10 @@ abstract class BackgroundGifFactory(
     }
 
     private val options by lazy {
-        val meta = metadata
-
         val x = borderWidth
-        val width = meta.width - borderWidth * 2
-        val height = meta.height * FRACTION.first / FRACTION.second
-        val y = meta.height - height
+        val width = metadata.width - borderWidth * 2
+        val height = metadata.height * FRACTION.first / FRACTION.second
+        val y = metadata.height - height
 
         return@lazy PlaceTextOptions(
             text = "",

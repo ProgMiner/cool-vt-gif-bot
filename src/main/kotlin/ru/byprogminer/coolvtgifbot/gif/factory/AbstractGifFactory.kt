@@ -1,56 +1,38 @@
 package ru.byprogminer.coolvtgifbot.gif.factory
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.FFmpegFrameRecorder
 import org.bytedeco.javacv.Java2DFrameConverter
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
 import ru.byprogminer.coolvtgifbot.gif.GifMetadata
 import ru.byprogminer.coolvtgifbot.utils.PlaceTextOptions
-import ru.byprogminer.coolvtgifbot.utils.clone
 import ru.byprogminer.coolvtgifbot.utils.placeText
 import java.awt.image.BufferedImage
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.annotation.PostConstruct
+import javax.imageio.ImageIO
 
 
 abstract class AbstractGifFactory(
+    private val name: String,
     final override val originalGif: Resource,
     private val thumbnailGif: Resource = originalGif,
 ) : GifFactory {
 
-    final override val metadata: GifMetadata
+    final override lateinit var metadata: GifMetadata
 
     // TODO remove frames caching and replace with overlaying by ffmpeg internally,
     //      in order to do that all videos must be encoded in non-compressing format like AVI
-    private val frames: List<BufferedImage>
-    private val frameRate: Double
+    private lateinit var frames: List<Resource>
+    private var frameRate: Double = .0
 
-    init {
-        val cvt = Java2DFrameConverter()
-
-        val grabber = FFmpegFrameGrabber(originalGif.inputStream)
-        grabber.start()
-
-        grabber.use {
-            metadata = GifMetadata(
-                width = grabber.imageWidth,
-                height = grabber.imageHeight,
-                duration = (grabber.lengthInTime / 1000000).toInt(),
-            )
-
-            // TODO maybe it could be moved into another thread to parallel caching all videos?
-            frames = List(grabber.lengthInVideoFrames) {
-                cvt.getBufferedImage(grabber.grabImage()).clone()
-            }
-
-            frameRate = grabber.frameRate
-        }
-    }
+    @Value("\${gif.cache.path}/frames")
+    private lateinit var cacheDir: Path
 
     override suspend fun createGif(text: String?, thumbnail: Boolean, resultPath: Path) {
         if (text == null && !thumbnail) {
@@ -82,15 +64,6 @@ abstract class AbstractGifFactory(
         val overlay = BufferedImage(metadata.width, metadata.height, BufferedImage.TYPE_4BYTE_ABGR)
         overlay.placeText(options)
 
-        val frames = frames.map { frame ->
-            async {
-                val newFrame = frame.clone()
-
-                newFrame.graphics.drawImage(overlay, 0, 0, null)
-                return@async newFrame
-            }
-        }
-
         val rec = FFmpegFrameRecorder(resultPath.toFile(), metadata.width, metadata.height)
         rec.videoCodec = AV_CODEC_ID_H264
         rec.frameRate = frameRate
@@ -102,7 +75,49 @@ abstract class AbstractGifFactory(
 
             rec.use {
                 frames.forEach { frame ->
-                    rec.record(cvt.getFrame(frame.await()))
+                    val newFrame = ImageIO.read(frame.inputStream)
+
+                    newFrame.graphics.drawImage(overlay, 0, 0, null)
+                    rec.record(cvt.getFrame(newFrame))
+                }
+            }
+        }
+    }
+
+    @PostConstruct
+    private fun init() {
+        val framesDir = cacheDir.resolve(name)
+        val cvt = Java2DFrameConverter()
+
+        val grabber = FFmpegFrameGrabber(originalGif.inputStream)
+
+        CoroutineScope(Dispatchers.IO).launch {
+            grabber.start()
+
+            grabber.use {
+                metadata = GifMetadata(
+                    width = grabber.imageWidth,
+                    height = grabber.imageHeight,
+                    duration = (grabber.lengthInTime / 1000000).toInt(),
+                )
+
+                frameRate = grabber.frameRate
+
+                if (!Files.isDirectory(framesDir)) {
+                    Files.createDirectories(framesDir)
+
+                    frames = List(grabber.lengthInVideoFrames) { idx ->
+                        val frame = cvt.getBufferedImage(grabber.grabImage())
+
+                        val framePath = framesDir.resolve(idx.toString())
+                        ImageIO.write(frame, "BMP", framePath.toFile())
+
+                        return@List FileSystemResource(framePath)
+                    }
+                } else {
+                    frames = List(grabber.lengthInVideoFrames) { idx ->
+                        FileSystemResource(framesDir.resolve(idx.toString()))
+                    }
                 }
             }
         }
