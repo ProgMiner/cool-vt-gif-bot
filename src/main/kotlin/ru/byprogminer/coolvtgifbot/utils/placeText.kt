@@ -35,10 +35,11 @@ private class PlaceTextContext(
         g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
 
         val fontSize = g.calcMaxFontSize(placeTextOptions.text, placeTextOptions.width, placeTextOptions.height)
-        val text = g.placeLineBreaks(placeTextOptions.text, placeTextOptions.width)
 
         // TODO change font
         g.font = g.font.deriveFont(fontSize)
+
+        val text = g.placeLineBreaks(placeTextOptions.text, placeTextOptions.width)
 
         val x = placeTextOptions.x + (placeTextOptions.width.toFloat() / 2)
         val y = placeTextOptions.y + (placeTextOptions.height.toFloat() / 2)
