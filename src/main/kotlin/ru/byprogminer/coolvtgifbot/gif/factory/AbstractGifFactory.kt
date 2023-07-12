@@ -19,7 +19,7 @@ import javax.imageio.ImageIO
 
 
 abstract class AbstractGifFactory(
-    private val name: String,
+    final override val name: String,
     final override val originalGif: Resource,
     private val thumbnailGif: Resource = originalGif,
 ) : GifFactory {

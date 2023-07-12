@@ -16,25 +16,25 @@ class GifController(
 
     @GetMapping("api/gif/{index}/${GifFacade.ORIGINAL_KIND}")
     suspend fun getOriginal(
-        @PathVariable("index") index: Int,
-    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(index, null, false) }
+        @PathVariable("index") key: String,
+    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(key, null, false) }
 
     @GetMapping("api/gif/{index}/${GifFacade.THUMBNAIL_KIND}")
     suspend fun getThumbnail(
-        @PathVariable("index") index: Int,
-    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(index, null, true) }
+        @PathVariable("index") key: String,
+    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(key, null, true) }
 
     @GetMapping("api/gif/{index}/${GifFacade.ORIGINAL_KIND}/{text}")
     suspend fun getOriginalWithText(
-        @PathVariable("index") index: Int,
+        @PathVariable("index") key: String,
         @PathVariable("text") text: String,
-    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(index, text, false) }
+    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(key, text, false) }
 
     @GetMapping("api/gif/{index}/${GifFacade.THUMBNAIL_KIND}/{text}")
     suspend fun getThumbnailWithText(
-        @PathVariable("index") index: Int,
+        @PathVariable("index") key: String,
         @PathVariable("text") text: String,
-    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(index, text, true) }
+    ): ResponseEntity<*> = createResponse { gifFacade.makeGif(key, text, true) }
 
     private suspend inline fun createResponse(block: () -> Resource?) = try {
         val result = block()

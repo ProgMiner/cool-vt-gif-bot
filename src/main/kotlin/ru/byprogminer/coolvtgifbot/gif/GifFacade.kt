@@ -10,7 +10,6 @@ import ru.byprogminer.coolvtgifbot.utils.urlEncoded
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -24,7 +23,7 @@ class GifFacade(
     private val cacheSize: Int,
     @Value("\${gif.cache.path}")
     private val cachePath: Path,
-    private val gifFactories: List<GifFactory>,
+    gifFactories: List<GifFactory>,
 ) {
 
     companion object {
@@ -33,10 +32,16 @@ class GifFacade(
         const val THUMBNAIL_KIND = "thumb"
     }
 
+    private val gifFactories: Map<String, GifFactory>
+
     private val cache: MutableMap<String, Deferred<Resource>> = ConcurrentHashMap()
     private val cacheKeys: Queue<String> = ConcurrentLinkedQueue()
 
     init {
+        this.gifFactories = gifFactories.associateBy { it.name }
+
+        require(this.gifFactories.size == gifFactories.size) { "names of GIF factories must be unique" }
+
         if (Files.isDirectory(cachePath)) {
             Files.list(cachePath).use { files ->
                 files.forEach {
@@ -62,45 +67,41 @@ class GifFacade(
         offset: Int,
         startMaking: Boolean,
     ): Pair<List<Triple<String, String, GifMetadata>>, Int> {
-        val tail = gifFactories.indices.drop(offset)
+        val tail = gifFactories.keys.drop(offset)
 
         val page = tail.take(maxSize)
 
         if (startMaking) {
             CoroutineScope(Dispatchers.Default).run {
-                page.forEach { index ->
-                    launch { makeGif(index, text, false) }
-                    launch { makeGif(index, text, true) }
+                page.forEach { key ->
+                    launch { makeGif(key, text, false) }
+                    launch { makeGif(key, text, true) }
                 }
             }
         }
 
-        val links = page.map { index ->
+        val links = page.map { key ->
             Triple(
-                makeLink(index, text, false),
-                makeLink(index, text, true),
-                gifFactories[index].metadata,
+                makeLink(key, text, false),
+                makeLink(key, text, true),
+                gifFactories[key]!!.metadata,
             )
         }
 
         return links to tail.size
     }
 
-    suspend fun makeGif(index: Int, text: String?, thumbnail: Boolean): Resource? = coroutineScope {
-        if (index < 0) {
-            throw IllegalArgumentException("index cannot be negative")
-        }
-
-        if (index >= gifFactories.size) {
+    suspend fun makeGif(key: String, text: String?, thumbnail: Boolean): Resource? = coroutineScope {
+        if (key !in gifFactories) {
             return@coroutineScope null
         }
 
-        val cacheKey = "$index/$thumbnail/$text"
+        val cacheKey = "$key/$thumbnail/$text"
 
         val result = cache.computeIfAbsent(cacheKey) {
             cacheKeys.add(cacheKey)
 
-            return@computeIfAbsent async { makeGif0(index, text, thumbnail) }
+            return@computeIfAbsent async { makeGif0(key, text, thumbnail) }
         }
 
         if (cache.size > cacheSize) {
@@ -116,9 +117,9 @@ class GifFacade(
         return@coroutineScope result.await()
     }
 
-    private suspend fun makeGif0(index: Int, text: String?, thumbnail: Boolean): Resource {
+    private suspend fun makeGif0(key: String, text: String?, thumbnail: Boolean): Resource {
         if (text == null && !thumbnail) {
-            val result = gifFactories[index].originalGif
+            val result = gifFactories[key]!!.originalGif
 
             if (result != null) {
                 return result
@@ -132,24 +133,26 @@ class GifFacade(
             Files.createDirectories(cachePath)
         }
 
-        gifFactories[index].createGif(text, thumbnail, path)
+        gifFactories[key]!!.createGif(text, thumbnail, path)
 
         return FileSystemResource(path)
     }
 
-    private fun makeLink(index: Int, text: String?, thumbnail: Boolean): String {
+    private fun makeLink(key: String, text: String?, thumbnail: Boolean): String {
         val kind = when (thumbnail) {
             true -> THUMBNAIL_KIND
             else -> ORIGINAL_KIND
         }
 
         // preventing telegram caching
-        val time = LocalDateTime.now()
+        // val time = LocalDateTime.now()
 
         return if (text != null) {
-            "$host/api/gif/$index/$kind/${text.urlEncoded}?$time"
+            // "$host/api/gif/$key/$kind/${text.urlEncoded}?$time"
+            "$host/api/gif/$key/$kind/${text.urlEncoded}"
         } else {
-            "$host/api/gif/$index/$kind?$time"
+            // "$host/api/gif/$key/$kind?$time"
+            "$host/api/gif/$key/$kind"
         }
     }
 }

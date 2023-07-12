@@ -8,6 +8,11 @@ import java.nio.file.Path
 interface GifFactory {
 
     /**
+     * Name of GIF factory
+     */
+    val name: String
+
+    /**
      * Metadata of producing GIFs
      */
     val metadata: GifMetadata
