@@ -12,6 +12,7 @@ abstract class BackgroundGifFactory(
     private val color: Color = Color.WHITE,
     private val backgroundColor: Color = Color.BLACK,
     private val borderWidth: Int = 5,
+    private val marginWidth: Int = 5,
 ) : AbstractGifFactory(name, originalGif) {
 
     private companion object {
@@ -20,10 +21,10 @@ abstract class BackgroundGifFactory(
     }
 
     private val options by lazy {
-        val x = borderWidth
-        val width = metadata.width - borderWidth * 2
-        val height = metadata.height * FRACTION.first / FRACTION.second
-        val y = metadata.height - height
+        val x = borderWidth + marginWidth
+        val width = metadata.width - borderWidth * 2 - marginWidth * 2
+        val height = metadata.height * FRACTION.first / FRACTION.second - marginWidth
+        val y = metadata.height - height - 2 * marginWidth
 
         return@lazy PlaceTextOptions(
             text = "",
