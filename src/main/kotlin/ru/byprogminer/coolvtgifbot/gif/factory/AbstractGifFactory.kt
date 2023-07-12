@@ -5,6 +5,7 @@ import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.FFmpegFrameRecorder
 import org.bytedeco.javacv.Java2DFrameConverter
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.Resource
@@ -16,6 +17,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.annotation.PostConstruct
 import javax.imageio.ImageIO
+import kotlin.coroutines.CoroutineContext
 
 
 abstract class AbstractGifFactory(
@@ -34,7 +36,14 @@ abstract class AbstractGifFactory(
     @Value("\${gif.cache.path}/frames")
     private lateinit var cacheDir: Path
 
-    override suspend fun createGif(text: String?, thumbnail: Boolean, resultPath: Path) {
+    @Autowired
+    private lateinit var coroutineContext: CoroutineContext
+
+    override suspend fun createGif(
+        text: String?,
+        thumbnail: Boolean,
+        resultPath: Path,
+    ) = withContext(coroutineContext) {
         if (text == null && !thumbnail) {
             withContext(Dispatchers.IO) {
                 Files.newOutputStream(resultPath).use {
@@ -42,7 +51,7 @@ abstract class AbstractGifFactory(
                 }
             }
 
-            return
+            return@withContext
         }
 
         if (text == null) {
@@ -52,7 +61,7 @@ abstract class AbstractGifFactory(
                 }
             }
 
-            return
+            return@withContext
         }
 
         createOriginalGif(text, resultPath)
@@ -60,7 +69,7 @@ abstract class AbstractGifFactory(
 
     protected abstract suspend fun createOriginalGif(text: String, resultPath: Path)
 
-    protected suspend fun placeText(options: PlaceTextOptions, resultPath: Path) = coroutineScope {
+    protected suspend fun placeText(options: PlaceTextOptions, resultPath: Path) = withContext(coroutineContext) {
         val overlay = BufferedImage(metadata.width, metadata.height, BufferedImage.TYPE_4BYTE_ABGR)
         overlay.placeText(options)
 
@@ -70,16 +79,14 @@ abstract class AbstractGifFactory(
         rec.format = "mp4"
 
         val cvt = Java2DFrameConverter()
-        withContext(Dispatchers.IO) {
-            rec.start()
+        rec.start()
 
-            rec.use {
-                frames.forEach { frame ->
-                    val newFrame = ImageIO.read(frame.inputStream)
+        rec.use {
+            frames.forEach { frame ->
+                val newFrame = ImageIO.read(frame.inputStream)
 
-                    newFrame.graphics.drawImage(overlay, 0, 0, null)
-                    rec.record(cvt.getFrame(newFrame))
-                }
+                newFrame.graphics.drawImage(overlay, 0, 0, null)
+                rec.record(cvt.getFrame(newFrame))
             }
         }
     }
@@ -91,7 +98,7 @@ abstract class AbstractGifFactory(
 
         val grabber = FFmpegFrameGrabber(originalGif.inputStream)
 
-        CoroutineScope(Dispatchers.IO).launch {
+        CoroutineScope(coroutineContext).launch {
             grabber.start()
 
             grabber.use {

@@ -3,30 +3,35 @@ package ru.byprogminer.coolvtgifbot.bot
 import com.github.kotlintelegrambot.dispatcher.handlers.InlineQueryHandlerEnvironment
 import com.github.kotlintelegrambot.entities.inlinequeryresults.InlineQueryResult
 import com.github.kotlintelegrambot.entities.inlinequeryresults.MimeType
+import kotlinx.coroutines.withContext
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import ru.byprogminer.coolvtgifbot.gif.GifFacade
 import java.util.*
+import kotlin.coroutines.CoroutineContext
 
 
 @Service
 class InlineHandler(
-    private val gifFacade: GifFacade,
     @Value("\${tg.make_gif_immediately}")
     private val startMaking: Boolean,
+    private val gifFacade: GifFacade,
+    private val coroutineContext: CoroutineContext,
 ) {
 
-    companion object {
+    private companion object {
 
-        private val logger = LoggerFactory.getLogger(InlineHandler::class.java)
+        @JvmStatic
+        val log: Logger = LoggerFactory.getLogger(InlineHandler::class.java)
     }
 
-    suspend fun InlineQueryHandlerEnvironment.handle() {
+    suspend fun InlineQueryHandlerEnvironment.handle(): Unit = withContext(coroutineContext) {
         val query = inlineQuery.query.ifBlank { null }
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
 
-        logger.info("New inline query: {}", inlineQuery)
+        log.info("New inline query: {}", inlineQuery)
 
         // 50 is current max size of page in TG inline query results
         val (links, size) = gifFacade.getGifLinks(query, 50, offset, startMaking)
@@ -44,7 +49,7 @@ class InlineHandler(
 
         val nextOffset = if (links.size < size) "" else (offset + links.size).toString()
 
-        logger.info("Results: {}", result)
+        log.info("Results: {}", result)
 
         bot.answerInlineQuery(
             inlineQueryId = inlineQuery.id,

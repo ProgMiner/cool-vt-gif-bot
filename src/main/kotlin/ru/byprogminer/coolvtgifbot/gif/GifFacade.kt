@@ -13,6 +13,8 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.coroutineContext
 
 
 @Service
@@ -24,6 +26,7 @@ class GifFacade(
     @Value("\${gif.cache.path}")
     private val cachePath: Path,
     gifFactories: List<GifFactory>,
+    coroutineContext: CoroutineContext,
 ) {
 
     companion object {
@@ -91,9 +94,9 @@ class GifFacade(
         return links to tail.size
     }
 
-    suspend fun makeGif(key: String, text: String?, thumbnail: Boolean): Resource? = coroutineScope {
+    suspend fun makeGif(key: String, text: String?, thumbnail: Boolean): Resource? = withContext(coroutineContext) {
         if (key !in gifFactories) {
-            return@coroutineScope null
+            return@withContext null
         }
 
         val cacheKey = "$key/$thumbnail/$text"
@@ -114,7 +117,7 @@ class GifFacade(
             }
         }
 
-        return@coroutineScope result.await()
+        return@withContext result.await()
     }
 
     private suspend fun makeGif0(key: String, text: String?, thumbnail: Boolean): Resource {

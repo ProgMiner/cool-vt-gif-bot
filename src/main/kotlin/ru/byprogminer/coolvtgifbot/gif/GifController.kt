@@ -1,5 +1,7 @@
 package ru.byprogminer.coolvtgifbot.gif
 
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -13,6 +15,12 @@ import org.springframework.web.bind.annotation.RestController
 class GifController(
     private val gifFacade: GifFacade,
 ) {
+
+    private companion object {
+
+        @JvmStatic
+        val log: Logger = LoggerFactory.getLogger(GifController::class.java)
+    }
 
     @GetMapping("api/gif/{index}/${GifFacade.ORIGINAL_KIND}")
     suspend fun getOriginal(
@@ -36,7 +44,7 @@ class GifController(
         @PathVariable("text") text: String,
     ): ResponseEntity<*> = createResponse { gifFacade.makeGif(key, text, true) }
 
-    private suspend inline fun createResponse(block: () -> Resource?) = try {
+    private inline fun createResponse(block: () -> Resource?) = try {
         val result = block()
 
         if (result == null) {
@@ -47,9 +55,11 @@ class GifController(
                 .body(result)
         }
     } catch (e: IllegalArgumentException) {
+        log.info("Bad request", e)
+
         ResponseEntity.badRequest().body(e.message)
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.info("Internal Server Error", e)
 
         ResponseEntity.internalServerError().body(e.message)
     }
