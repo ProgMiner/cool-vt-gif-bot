@@ -14,7 +14,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.coroutineContext
 
 
 @Service
@@ -26,7 +25,7 @@ class GifFacade(
     @Value("\${gif.cache.path}")
     private val cachePath: Path,
     gifFactories: List<GifFactory>,
-    coroutineContext: CoroutineContext,
+    private val coroutineContext: CoroutineContext,
 ) {
 
     companion object {
@@ -75,7 +74,7 @@ class GifFacade(
         val page = tail.take(maxSize)
 
         if (startMaking) {
-            CoroutineScope(Dispatchers.Default).run {
+            CoroutineScope(coroutineContext).run {
                 page.forEach { key ->
                     launch { makeGif(key, text, false) }
                     launch { makeGif(key, text, true) }

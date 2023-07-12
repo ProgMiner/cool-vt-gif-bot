@@ -3,14 +3,12 @@ package ru.byprogminer.coolvtgifbot.bot
 import com.github.kotlintelegrambot.dispatcher.handlers.InlineQueryHandlerEnvironment
 import com.github.kotlintelegrambot.entities.inlinequeryresults.InlineQueryResult
 import com.github.kotlintelegrambot.entities.inlinequeryresults.MimeType
-import kotlinx.coroutines.withContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import ru.byprogminer.coolvtgifbot.gif.GifFacade
 import java.util.*
-import kotlin.coroutines.CoroutineContext
 
 
 @Service
@@ -18,7 +16,6 @@ class InlineHandler(
     @Value("\${tg.make_gif_immediately}")
     private val startMaking: Boolean,
     private val gifFacade: GifFacade,
-    private val coroutineContext: CoroutineContext,
 ) {
 
     private companion object {
@@ -27,7 +24,7 @@ class InlineHandler(
         val log: Logger = LoggerFactory.getLogger(InlineHandler::class.java)
     }
 
-    suspend fun InlineQueryHandlerEnvironment.handle(): Unit = withContext(coroutineContext) {
+    suspend fun InlineQueryHandlerEnvironment.handle() {
         val query = inlineQuery.query.ifBlank { null }
         val offset = inlineQuery.offset.toIntOrNull() ?: 0
 
