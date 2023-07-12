@@ -6,6 +6,9 @@
 
 Чтобы ускорить и упростить процесс добавления гифки в бота можно создать PR,
 разместив уже подготовленную (без лишнего текста) в директории [./src/main/resources/gif](./src/main/resources/gif).
+
+Гифки хранятся в формате mp4, также, как если вы их скачиваете из интерфейса телеги.
+
 А ещё лучше сразу создать класс фабрики в [./src/main/kotlin/ru/byprogminer/coolvtgifbot/gif/factory](./src/main/kotlin/ru/byprogminer/coolvtgifbot/gif/factory)
 по примеру из других фабрик.
 
