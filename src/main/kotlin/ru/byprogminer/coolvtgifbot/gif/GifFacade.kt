@@ -10,6 +10,7 @@ import ru.byprogminer.coolvtgifbot.utils.urlEncoded
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -147,14 +148,12 @@ class GifFacade(
         }
 
         // preventing telegram caching
-        // val time = LocalDateTime.now()
+        val time = LocalDateTime.now()
 
         return if (text != null) {
-            // "$host/api/gif/$key/$kind/${text.urlEncoded}?$time"
-            "$host/api/gif/$key/$kind/${text.urlEncoded}"
+            "$host/api/gif/$key/$kind/${text.urlEncoded}?$time"
         } else {
-            // "$host/api/gif/$key/$kind?$time"
-            "$host/api/gif/$key/$kind"
+            "$host/api/gif/$key/$kind?$time"
         }
     }
 }
