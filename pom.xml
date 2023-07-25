@@ -17,7 +17,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <kotlin.version>1.6.21</kotlin.version>
+        <kotlin.version>1.9.0</kotlin.version>
     </properties>
 
     <repositories>
@@ -134,8 +134,8 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-        <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
+        <sourceDirectory>src/main/kotlin</sourceDirectory>
+        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
 
         <plugins>
             <plugin>
@@ -150,6 +150,18 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
+                <version>${kotlin.version}</version>
+
+                <executions>
+                    <execution>
+                        <id>compile</id>
+                        <phase>compile</phase>
+
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
 
                 <configuration>
                     <args>
@@ -159,6 +171,8 @@
                     <compilerPlugins>
                         <plugin>spring</plugin>
                     </compilerPlugins>
+
+                    <jvmTarget>1.8</jvmTarget>
                 </configuration>
 
                 <dependencies>
